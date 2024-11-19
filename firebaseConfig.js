@@ -1,11 +1,8 @@
 import { initializeApp } from "firebase/app";
-import {getReactNativePersistence, initializeAuth} from 'firebase/auth';
+import { getReactNativePersistence, initializeAuth, getAuth } from 'firebase/auth';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {getFirestore, collection} from 'firebase/firestore'
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore, collection } from 'firebase/firestore'
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyC92Ac1IuNPmpHPa1jyrMfDzhLi_OBcUOo",
   authDomain: "petsitters-391a5.firebaseapp.com",
@@ -17,11 +14,21 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
-});
 
+// Перевіряємо, чи вже ініціалізована автентифікація
+let auth;
+try {
+  auth = getAuth(app);
+} catch (error) {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage)
+  });
+}
+
+export { auth };
 export const db = getFirestore(app);
 
 export const usersRef = collection(db, 'users');
+export const sittersRef = collection(db, 'sitters');
+export const ownersRef = collection(db, 'owners');
 export const roomRef = collection(db, 'rooms');

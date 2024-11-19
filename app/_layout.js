@@ -5,22 +5,47 @@ import "../global.css";
 import { AuthContextProvider, useAuth } from '../context/authContext';
 import { MenuProvider } from 'react-native-popup-menu';
 import { useFonts } from 'expo-font';
+import { SitterContextProvider } from '../context/sitterContext';
 
-const MainLayout = ()=>{
-    const {isAuthenticated} = useAuth();
+// Виносимо логіку маршрутизації в окремий компонент
+function InitialLayout() {
+    const {isAuthenticated, user} = useAuth();
     const segments = useSegments();
     const router = useRouter();
 
-
     useEffect(()=>{
-        // check if user is authenticated or not
+        // Перевіряємо автентифікацію
         if(typeof isAuthenticated=='undefined') return;
+
         const inApp = segments[0]=='(app)';
-        if(isAuthenticated && !inApp){
-            // redirect to home
-            router.replace('home');
+        const inSitter = segments[0]=='(sitter)';
+
+        console.log('Current user:', user);
+        console.log('Current role:', user?.role);
+        console.log('Current segment:', segments[0]);
+
+        if(isAuthenticated){
+            // Якщо користувач автентифікований
+            if(user?.role === 'sitter'){
+                console.log('Redirecting to sitter interface');
+                // Якщо це сіттер і він не в інтерфейсі сіттера
+                if(!inSitter){
+                    router.replace('/(sitter)/home');
+                }
+            } else {
+                console.log('Redirecting to owner interface');
+                // Якщо це власник і він не в інтерфейсі власника
+                if(!inApp){
+                    router.replace('/(app)/home');
+                }
+            }
+        } else {
+            // Якщо користувач не автентифікований
+            if(inApp || inSitter){
+                router.replace('/signIn');
+            }
         }
-    }, [isAuthenticated])
+    }, [isAuthenticated, user?.role])
 
     return <Slot />
 }
@@ -40,7 +65,9 @@ export default function RootLayout() {
   return (
     <MenuProvider>
         <AuthContextProvider>
-            <MainLayout />
+            <SitterContextProvider>
+                <InitialLayout />
+            </SitterContextProvider>
         </AuthContextProvider>
     </MenuProvider>
     

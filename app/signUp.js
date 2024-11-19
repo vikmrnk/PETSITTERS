@@ -12,19 +12,20 @@ export default function SignUp() {
     const router = useRouter();
     const {register} = useAuth();
     const [loading, setLoading] = useState(false);
+    const [role, setRole] = useState(null);
 
     const emailRef = useRef("");
     const passwordRef = useRef("");
     const usernameRef = useRef("");
 
     const handleRegister = async ()=>{
-        if(!emailRef.current || !passwordRef.current || !usernameRef.current){
-            Alert.alert('Sign Up', "Please fill all the fields!");
+        if(!emailRef.current || !passwordRef.current || !usernameRef.current || !role){
+            Alert.alert('Sign Up', "Please fill all the fields and select your role!");
             return;
         }
         setLoading(true);
 
-        let response = await register(emailRef.current, passwordRef.current, usernameRef.current);
+        let response = await register(emailRef.current, passwordRef.current, usernameRef.current, role);
         setLoading(false);
 
         console.log('got result: ', response);
@@ -62,6 +63,26 @@ export default function SignUp() {
             
             {/* inputs */}
             <View className="gap-4">
+                <View className="flex-row justify-between mb-4">
+                    <TouchableOpacity 
+                        onPress={() => setRole('owner')}
+                        className={`p-4 rounded-xl flex-1 mr-2 ${role === 'owner' ? 'bg-[#9fc0af]' : 'bg-neutral-100'}`}
+                    >
+                        <Text className={`text-center font-semibold ${role === 'owner' ? 'text-white' : 'text-[#9fc0af]'}`}>
+                            Pet Owner
+                        </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        onPress={() => setRole('sitter')}
+                        className={`p-4 rounded-xl flex-1 ml-2 ${role === 'sitter' ? 'bg-[#9fc0af]' : 'bg-neutral-100'}`}
+                    >
+                        <Text className={`text-center font-semibold ${role === 'sitter' ? 'text-white' : 'text-[#9fc0af]'}`}>
+                            Pet Sitter
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                
                 <View style={{height: hp(7)}} className="flex-row gap-4 px-4 bg-neutral-100 items-center rounded-xl">
                     <Feather name="user" size={hp(2.7)} color="#9fc0af" />
                     <TextInput

@@ -9,14 +9,30 @@ export const AuthContextProvider = ({children})=>{
     const [user, setUser] = useState(null);
     const [isAuthenticated, setIsAuthenticated] = useState(undefined);
 
-
     useEffect(()=>{
-        const unsub = onAuthStateChanged(auth, (user)=>{
-            // console.log('got user: ', user);
+        const unsub = onAuthStateChanged(auth, async (user)=>{
+            console.log('Auth state changed:', user);
             if(user){
-                setIsAuthenticated(true);
-                setUser(user);
-                updateUserData(user.uid);
+                try {
+                    const docRef = doc(db, 'users', user.uid);
+                    const docSnap = await getDoc(docRef);
+                    
+                    if(docSnap.exists()){
+                        const userData = docSnap.data();
+                        setUser({
+                            ...user,
+                            username: userData.username,
+                            profileUrl: userData.profileUrl,
+                            userId: userData.userId,
+                            role: userData.role
+                        });
+                        setIsAuthenticated(true);
+                    }
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
+                    setIsAuthenticated(false);
+                    setUser(null);
+                }
             }else{
                 setIsAuthenticated(false);
                 setUser(null);
@@ -54,25 +70,42 @@ export const AuthContextProvider = ({children})=>{
             return {success: false, msg: e.message, error: e};
         }
     }
-    const register = async (email, password, username, profileUrl)=>{
-        try{
+    const register = async (email, password, userData, role) => {
+        try {
+            // Створюємо користувача
             const response = await createUserWithEmailAndPassword(auth, email, password);
-            console.log('response.user :', response?.user);
-
-            // setUser(response?.user);
-            // setIsAuthenticated(true);
-
-            await setDoc(doc(db, "users", response?.user?.uid),{
-                username, 
-                profileUrl,
+            
+            // Зберігаємо базову інформацію
+            await setDoc(doc(db, "users", response?.user?.uid), {
+                email,
+                role,
                 userId: response?.user?.uid
             });
-            return {success: true, data: response?.user};
-        }catch(e){
+
+            // Зберігаємо специфічну інформацію залежно від ролі
+            if (role === 'sitter') {
+                await setDoc(doc(db, "sitters", response?.user?.uid), {
+                    ...userData,
+                    userId: response?.user?.uid,
+                    services: [],
+                    availability: [],
+                    rating: 0,
+                    reviews: []
+                });
+            } else {
+                await setDoc(doc(db, "owners", response?.user?.uid), {
+                    ...userData,
+                    userId: response?.user?.uid,
+                    pets: []
+                });
+            }
+
+            return { success: true, data: response?.user };
+        } catch (e) {
             let msg = e.message;
-            if(msg.includes('(auth/invalid-email)')) msg='Invalid email'
-            if(msg.includes('(auth/email-already-in-use)')) msg='This email is already in use'
-            return {success: false, msg};
+            if(msg.includes('auth/invalid-email')) msg = 'Invalid email';
+            if(msg.includes('auth/email-already-in-use')) msg = 'Email already in use';
+            return { success: false, msg };
         }
     }
 

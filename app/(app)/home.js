@@ -6,14 +6,30 @@ import Slider from '../../components/home/Slider';
 import PetListByCategory from '../../components/home/PetListByCategory';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
+import { useAuth } from '../../context/authContext';
 
 const Colors = {
   PRIMARY: '#9fc0af',
   LIGHT_PRIMARY: '#e8f1ec'
 }
 
-const HomeContent = () => {
-  return (
+export default function Home() {
+  const { user } = useAuth();
+  const isSitter = user?.role === 'sitter';
+
+  const SitterHomeContent = () => (
+    <View style={{ padding: 20 }}>
+      <Text style={{
+        fontFamily: 'Poppins-Medium',
+        fontSize: 24,
+        marginBottom: 20
+      }}>My Requests</Text>
+      
+      {/* Тут буде список запитів від власників тварин */}
+    </View>
+  );
+
+  const OwnerHomeContent = () => (
     <>
       <Header />
       <Slider />
@@ -30,9 +46,7 @@ const HomeContent = () => {
       </Link>
     </>
   );
-};
 
-export default function Home() {
   return (
     <View style={{
       flex: 1,
@@ -41,7 +55,7 @@ export default function Home() {
       <StatusBar style="dark" />
       <FlatList
         data={[1]}
-        renderItem={() => <HomeContent />}
+        renderItem={() => isSitter ? <SitterHomeContent /> : <OwnerHomeContent />}
         contentContainerStyle={{
           padding: 20,
           paddingTop: 20
