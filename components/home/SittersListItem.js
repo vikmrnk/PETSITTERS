@@ -43,7 +43,7 @@ export default function SittersListItem({ sitter }) {
           borderRadius: 15,
           padding: 5
         }}>
-          <MarkFav pet={sitter} color={Colors.PRIMARY} />
+          <MarkFav sitter={sitter} color={Colors.PRIMARY} />
         </View>
       </View>
       

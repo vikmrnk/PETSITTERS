@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Keyboard, ActivityIndicator, FlatList, Platform, KeyboardAvoidingView } from 'react-native'
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Keyboard, ActivityIndicator, FlatList, Platform, KeyboardAvoidingView, StyleSheet } from 'react-native'
 import React, { useEffect, useRef, useState } from 'react'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar';
@@ -189,32 +189,40 @@ export default function Chat() {
     },[])
 
     const getUsers = async ()=>{
-        const q = query(usersRef, where('userId', '!=', user?.userId));
-        const querySnapshot = await getDocs(q);
-        let data = [];
-        querySnapshot.forEach(doc=>{
-            data.push({...doc.data()});
-        });
-        setUsers(data);
-    }
+        try {
+            // Отримуємо всі кімнати, де є поточний сіттер
+            const roomsQuery = query(
+                collection(db, "rooms"),
+                where('participants', 'array-contains', user.userId)
+            );
+            
+            const roomsSnapshot = await getDocs(roomsQuery);
+            const userIds = new Set();
 
-    const testUsers = [
-        {
-            userId: '1',
-            username: 'Test User 1',
-            profileUrl: 'https://via.placeholder.com/150',
-        },
-        {
-            userId: '2',
-            username: 'Test User 2',
-            profileUrl: 'https://via.placeholder.com/150',
+            // Збираємо унікальні ID власників з кімнат
+            roomsSnapshot.docs.forEach(doc => {
+                const participants = doc.data().participants || [];
+                participants.forEach(participantId => {
+                    if(participantId !== user.userId) {
+                        userIds.add(participantId);
+                    }
+                });
+            });
+
+            // Отримуємо інформацію про власників
+            const usersData = [];
+            for(const userId of userIds) {
+                const userDoc = await getDocs(query(usersRef, where('userId', '==', userId)));
+                if(!userDoc.empty) {
+                    usersData.push(userDoc.docs[0].data());
+                }
+            }
+
+            setUsers(usersData);
+        } catch (error) {
+            console.error('Error fetching users:', error);
         }
-    ];
-
-    // Тимчасово використовуйте тестові дані
-    useEffect(() => {
-        setUsers(testUsers);
-    }, []);
+    }
 
     return (
         <View className="flex-1 bg-white">
@@ -223,9 +231,22 @@ export default function Chat() {
                 <ChatList currentUser={user} users={users} />
             ):(
                 <View className="flex items-center" style={{top: hp(30)}}>
-                    <ActivityIndicator size="large" />
+                    <Text style={{fontSize: hp(2), color: '#666'}}>No messages yet</Text>
                 </View>
             )}
         </View>
     )
 }
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    },
+    header: {
+        paddingHorizontal: 15,
+        paddingBottom: 15,
+    },
+    // ... інші стилі
+});

@@ -1,4 +1,4 @@
-import { View, Text, Image, TouchableOpacity, ScrollView, TextInput, StyleSheet, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, Image, TouchableOpacity, ScrollView, TextInput, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/authContext'
 import { Ionicons } from '@expo/vector-icons'
@@ -31,11 +31,30 @@ export default function SitterProfile() {
     });
 
     const services = [
-      'Dog Walking',
-      'Pet Sitting',
-      'House Sitting',
-      'Day Care',
-      'Boarding'
+      {
+        name: 'Boarding',
+        value: 'boarding'
+      },
+      {
+        name: 'Sitting',
+        value: 'sitting'
+      },
+      {
+        name: 'Walking',
+        value: 'walking'
+      },
+      {
+        name: 'Grooming',
+        value: 'grooming'
+      },
+      {
+        name: 'Training',
+        value: 'training'
+      },
+      {
+        name: 'Vet',
+        value: 'vet'
+      }
     ];
 
     const days = [
@@ -65,7 +84,7 @@ export default function SitterProfile() {
               location: data.location || '',
               experience: data.experience || '',
               price: data.price || '',
-              services: data.category || [],
+              services: data.services || [],
               availability: data.availability || [],
               name: data.name || user?.username || '',
               imageUrl: data.imageUrl || ''
@@ -86,22 +105,17 @@ export default function SitterProfile() {
 
         const sitterDoc = doc(db, 'sitters', user.userId);
         
-        if (!profileData.description || !profileData.location || !profileData.price) {
-          Alert.alert('Error', 'Please fill in all required fields');
-          return;
-        }
+        const servicesArray = Array.isArray(profileData.services) 
+          ? profileData.services 
+          : [profileData.services].filter(Boolean);
 
         await setDoc(sitterDoc, {
-          description: profileData.description,
-          location: profileData.location,
-          experience: profileData.experience,
-          price: profileData.price,
-          category: profileData.services,
-          availability: profileData.availability,
-          name: profileData.name,
-          imageUrl: profileData.imageUrl,
+          ...profileData,
+          services: servicesArray,
           updatedAt: new Date().toISOString()
         }, { merge: true });
+
+        console.log('Saved services:', servicesArray);
 
         setIsEditing(false);
         Alert.alert('Success', 'Profile updated successfully!');
@@ -113,13 +127,23 @@ export default function SitterProfile() {
       }
     };
 
-    const toggleService = (service) => {
-      setProfileData(prev => ({
-        ...prev,
-        services: prev.services.includes(service)
-          ? prev.services.filter(s => s !== service)
-          : [...prev.services, service]
-      }));
+    const toggleService = (serviceValue) => {
+      setProfileData(prev => {
+        const currentServices = [...(prev.services || [])];
+        
+        const serviceIndex = currentServices.indexOf(serviceValue);
+        
+        if (serviceIndex !== -1) {
+          currentServices.splice(serviceIndex, 1);
+        } else {
+          currentServices.push(serviceValue);
+        }
+        
+        return {
+          ...prev,
+          services: currentServices
+        };
+      });
     };
 
     const toggleDay = (day) => {
@@ -198,6 +222,22 @@ export default function SitterProfile() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const onPressMenu = async (menu) => {
+        if (menu.path === 'logout') {
+            try {
+                const response = await logout();
+                if(response.success) {
+                    router.replace('/(auth)/signIn');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+            return;
+        }
+        // ... інший код ...
     };
 
     return (
@@ -292,20 +332,19 @@ export default function SitterProfile() {
             <View style={styles.section}>
                 <Text style={styles.label}>Services</Text>
                 <View style={styles.optionsContainer}>
-                    {services.map((service) => (
+                    {services.map((service, index) => (
                         <TouchableOpacity
-                            key={service}
+                            key={index}
                             style={[
                                 styles.optionButton,
-                                profileData.services.includes(service) && styles.selectedOption
+                                profileData.services?.includes(service.value) && styles.selectedOption
                             ]}
-                            onPress={() => isEditing && toggleService(service)}
-                            disabled={!isEditing}
+                            onPress={() => toggleService(service.value)}
                         >
                             <Text style={[
                                 styles.optionText,
-                                profileData.services.includes(service) && styles.selectedOptionText
-                            ]}>{service}</Text>
+                                profileData.services?.includes(service.value) && styles.selectedOptionText
+                            ]}>{service.name}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -366,8 +405,12 @@ export default function SitterProfile() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.WHITE,
-        padding: 20,
+        backgroundColor: '#fff',
+        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    },
+    header: {
+        paddingHorizontal: 15,
+        paddingBottom: 15,
     },
     loadingOverlay: {
         position: 'absolute',
@@ -386,13 +429,14 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         position: 'relative',
-        marginBottom: 15,
+        alignItems: 'center',
+        marginBottom: 20,
     },
     profileImage: {
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: Colors.LIGHT_PRIMARY,
+        marginBottom: 10,
     },
     defaultImage: {
         backgroundColor: Colors.LIGHT_PRIMARY,
@@ -401,19 +445,12 @@ const styles = StyleSheet.create({
     },
     editImageButton: {
         position: 'absolute',
-        right: -5,
-        bottom: -5,
+        bottom: 10,
+        right: '30%',
         backgroundColor: Colors.PRIMARY,
         padding: 8,
         borderRadius: 20,
         elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
     },
     name: {
         fontFamily: 'Poppins-SemiBold',
@@ -450,24 +487,26 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 10,
+        marginTop: 10
     },
     optionButton: {
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        borderRadius: 20,
         borderWidth: 1,
         borderColor: Colors.PRIMARY,
-        borderRadius: 20,
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        marginBottom: 10,
+        backgroundColor: Colors.WHITE
     },
     selectedOption: {
-        backgroundColor: Colors.PRIMARY,
+        backgroundColor: Colors.PRIMARY
     },
     optionText: {
-        fontFamily: 'Poppins-Regular',
         color: Colors.PRIMARY,
+        fontFamily: 'Poppins-Regular',
+        fontSize: 14
     },
     selectedOptionText: {
-        color: Colors.WHITE,
+        color: Colors.WHITE
     },
     editButton: {
         backgroundColor: Colors.LIGHT_PRIMARY,
@@ -494,7 +533,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     logoutButton: {
-        backgroundColor: '#ff4444',
+        backgroundColor: Colors.LIGHT_PRIMARY,
         padding: 16,
         borderRadius: 12,
         alignItems: 'center',
@@ -502,7 +541,7 @@ const styles = StyleSheet.create({
         marginBottom: 30,
     },
     logoutButtonText: {
-        color: Colors.WHITE,
+        color: '#fbcbc9',
         fontFamily: 'Poppins-Medium',
         fontSize: 16,
     },

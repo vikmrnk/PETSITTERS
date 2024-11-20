@@ -1,98 +1,117 @@
-import { View, FlatList } from 'react-native';
-import React, { useState } from 'react';
+import { View, FlatList, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import Category from './Category';
 import SittersListItem from './SittersListItem';
+import { collection, query, where, getDocs, deleteDoc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useAuth } from '../../context/authContext';
+import { useRouter } from 'expo-router';
 
 export default function SittersListByCategory() {
-  const [sitters, setSitters] = useState([
-    {
-      id: 1,
-      name: 'Anna',
-      imageUrl: require('../../assets/images/Anna.jpg'),
-      category: 'Boarding',
-      rating: 4.8,
-      price: '25',
-      description: 'Professional pet sitter'
-    },
-    {
-      id: 2,
-      name: 'Maria',
-      imageUrl: require('../../assets/images/Maria.webp'),
-      category: 'Sitting',
-      rating: 4.9,
-      price: '30',
-      description: 'Experienced dog sitter' 
-    },
-    {
-        id: 3,
-        name: 'Den',
-        imageUrl: require('../../assets/images/Den.jpg'),
-        category: 'Vet',
-        rating: 4.7,
-        price: '40',
-        description: 'Certified veterinarian'
-      },
-      {
-        id: 4,
-        name: 'Max',
-        imageUrl: require('../../assets/images/Max.jpeg'),
-        category: 'Training',
-        rating: 4.6,
-        price: '35',
-        description: 'Professional dog trainer'
-      },
-      {
-        id: 5,
-        name: 'Dayna',
-        imageUrl: require('../../assets/images/Dayna.jpg'),
-        category: 'Walking',
-        rating: 4.5,
-        price: '20',
-        description: 'Experienced dog walker'
-      },
-      {
-        id: 6,
-        name: 'Viktoriia',
-        imageUrl: require('../../assets/images/Viktoriia.jpeg'),
-        category: 'Vet',
-        rating: 4.4,
-        price: '45',
-        description: 'Certified veterinarian'
-      },
-      {
-        id: 7,
-        name: 'Lily',
-        imageUrl: require('../../assets/images/Lily.jpg'),
-        category: 'Grooming',
-        rating: 4.3,
-        price: '30',
-        description: 'Professional dog groomer'
+  const [sitters, setSitters] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('boarding');
+  const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    const loadSitters = async () => {
+      try {
+        const sittersRef = collection(db, 'sitters');
+        console.log('Searching for category:', selectedCategory);
+        
+        const q = query(
+          sittersRef,
+          where('services', 'array-contains', selectedCategory)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        console.log('Found sitters:', querySnapshot.size);
+        
+        const sittersData = [];
+        querySnapshot.forEach((doc) => {
+          sittersData.push({ id: doc.id, ...doc.data() });
+        });
+        
+        setSitters(sittersData);
+      } catch (error) {
+        console.error('Error loading sitters:', error);
       }
-    // ... інші сіттери
-  ]);
-  
-  const [selectedCategory, setSelectedCategory] = useState('Boarding');
+    };
 
-  const filteredSitters = sitters.filter(sitter => 
-    sitter.category === selectedCategory
-  );
+    loadSitters();
+  }, [selectedCategory]);
 
-  const handleCategorySelect = (category) => {
-    setSelectedCategory(category);
+  const handleCategorySelect = (categoryValue) => {
+    console.log('Selected category:', categoryValue);
+    setSelectedCategory(categoryValue);
+  };
+
+  const handleAddToFavorites = async (sitter) => {
+    if (!user?.userId) {
+        Alert.alert(
+            "Authentication Required",
+            "Please sign in to add favorites",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Sign In", 
+                    onPress: () => router.push('/(auth)/signIn')
+                }
+            ]
+        );
+        return;
+    }
+
+    try {
+        const favoriteRef = doc(db, 'favorites', `${user.userId}_${sitter.userId}`);
+        const favoriteDoc = await getDoc(favoriteRef);
+
+        if (favoriteDoc.exists()) {
+            // Якщо вже є в улюблених - видаляємо
+            await deleteDoc(favoriteRef);
+            // Оновлюємо локальний стан
+            setSitters(prevSitters => 
+                prevSitters.map(s => 
+                    s.userId === sitter.userId 
+                        ? {...s, isFavorite: false}
+                        : s
+                )
+            );
+        } else {
+            // Якщо немає в улюблених - додаємо
+            await setDoc(favoriteRef, {
+                userId: user.userId,
+                sitterId: sitter.userId,
+                sitterData: sitter,
+                createdAt: serverTimestamp()
+            });
+            // Оновлюємо локальний стан
+            setSitters(prevSitters => 
+                prevSitters.map(s => 
+                    s.userId === sitter.userId 
+                        ? {...s, isFavorite: true}
+                        : s
+                )
+            );
+        }
+    } catch (error) {
+        console.error('Error updating favorites:', error);
+        Alert.alert('Error', 'Failed to update favorites. Please try again.');
+    }
   };
 
   return (
     <View>
-      <Category category={handleCategorySelect} />
+      <Category onSelectCategory={handleCategorySelect} />
 
       <FlatList
-        data={filteredSitters}
+        data={sitters}
         style={{ marginTop: 10 }}
         horizontal={true}
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <SittersListItem sitter={item} />
+          <SittersListItem sitter={item} onAddToFavorites={handleAddToFavorites} />
         )}
       />
     </View>

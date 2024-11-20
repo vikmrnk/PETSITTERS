@@ -30,10 +30,10 @@ function SitterLayout() {
                 name="home" 
                 options={{
                     headerShown: false,
-                    title: 'Requests',
-                    tabBarLabel: 'Requests',
+                    title: 'Home',
+                    tabBarLabel: 'Home',
                     tabBarIcon: ({color, size}) => (
-                        <Ionicons name="list-outline" size={size} color={color} />
+                        <Ionicons name="home" size={size} color={color} />
                     )
                 }}
             />
@@ -44,9 +44,20 @@ function SitterLayout() {
                     title: 'Messages',
                     tabBarLabel: 'Messages',
                     tabBarIcon: ({color, size}) => (
-                        <Ionicons name="chatbubble-outline" size={size} color={color} />
+                        <Ionicons name="chatbubble-ellipses" size={size} color={color} />
                     ),
                     tabBarBadge: null
+                }}
+            />
+            <Tabs.Screen 
+                name="posts" 
+                options={{
+                    headerShown: false,
+                    title: 'Posts',
+                    tabBarLabel: 'Posts',
+                    tabBarIcon: ({color, size}) => (
+                        <Ionicons name="images" size={size} color={color} />
+                    )
                 }}
             />
             <Tabs.Screen 
@@ -56,7 +67,7 @@ function SitterLayout() {
                     title: 'Profile',
                     tabBarLabel: 'Profile',
                     tabBarIcon: ({color, size}) => (
-                        <Ionicons name="person-outline" size={size} color={color} />
+                        <Ionicons name="person" size={size} color={color} />
                     )
                 }}
             />

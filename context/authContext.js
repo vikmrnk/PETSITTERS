@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import {onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut} from 'firebase/auth';
 import { auth, db } from "../firebaseConfig";
-import {doc, getDoc, setDoc} from 'firebase/firestore'
+import {doc, getDoc, setDoc, collection, serverTimestamp} from 'firebase/firestore'
 
 export const AuthContext = createContext();
 
@@ -11,21 +11,46 @@ export const AuthContextProvider = ({children})=>{
 
     useEffect(()=>{
         const unsub = onAuthStateChanged(auth, async (user)=>{
-            console.log('Auth state changed:', user);
             if(user){
                 try {
-                    const docRef = doc(db, 'users', user.uid);
-                    const docSnap = await getDoc(docRef);
+                    // Отримуємо базові дані користувача
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
                     
-                    if(docSnap.exists()){
-                        const userData = docSnap.data();
-                        setUser({
-                            ...user,
-                            username: userData.username,
-                            profileUrl: userData.profileUrl,
-                            userId: userData.userId,
-                            role: userData.role
-                        });
+                    if(userDocSnap.exists()){
+                        const userData = userDocSnap.data();
+                        
+                        if(userData.role === 'sitter') {
+                            // Для сіттерів
+                            const sitterDocRef = doc(db, 'sitters', user.uid);
+                            const sitterDocSnap = await getDoc(sitterDocRef);
+                            
+                            if(sitterDocSnap.exists()) {
+                                const sitterData = sitterDocSnap.data();
+                                setUser({
+                                    ...userData,
+                                    username: sitterData.name,
+                                    profileUrl: sitterData.imageUrl || '',
+                                    userId: user.uid,
+                                    name: sitterData.name
+                                });
+                            }
+                        } else {
+                            // Для власників тварин
+                            const ownerDocRef = doc(db, 'owners', user.uid);
+                            const ownerDocSnap = await getDoc(ownerDocRef);
+                            
+                            if(ownerDocSnap.exists()) {
+                                const ownerData = ownerDocSnap.data();
+                                setUser({
+                                    ...userData,
+                                    username: ownerData.name,
+                                    profileUrl: ownerData.imageUrl || '',
+                                    userId: user.uid,
+                                    name: ownerData.name
+                                });
+                            }
+                        }
                         setIsAuthenticated(true);
                     }
                 } catch (error) {
@@ -41,15 +66,9 @@ export const AuthContextProvider = ({children})=>{
         return unsub;
     },[]);
 
-    const updateUserData = async (userId)=>{
-        const docRef = doc(db, 'users', userId);
-        const docSnap = await getDoc(docRef);
-
-        if(docSnap.exists()){
-            let data = docSnap.data();
-            setUser({...user, username: data.username, profileUrl: data.profileUrl, userId: data.userId})
-        }
-    }
+    const updateUserData = (newData) => {
+        setUser(newData);
+    };
 
     const login = async (email, password)=>{
         try{
@@ -70,35 +89,56 @@ export const AuthContextProvider = ({children})=>{
             return {success: false, msg: e.message, error: e};
         }
     }
-    const register = async (email, password, userData, role) => {
+    const register = async (email, password, username, role) => {
         try {
-            // Створюємо користувача
             const response = await createUserWithEmailAndPassword(auth, email, password);
             
-            // Зберігаємо базову інформацію
-            await setDoc(doc(db, "users", response?.user?.uid), {
+            // Базові дані користувача
+            const userData = {
                 email,
+                username,
                 role,
-                userId: response?.user?.uid
-            });
+                userId: response?.user?.uid,
+                createdAt: serverTimestamp()
+            };
 
-            // Зберігаємо специфічну інформацію залежно від ролі
+            await setDoc(doc(db, "users", response?.user?.uid), userData);
+
             if (role === 'sitter') {
                 await setDoc(doc(db, "sitters", response?.user?.uid), {
-                    ...userData,
+                    name: username,
+                    email,
                     userId: response?.user?.uid,
                     services: [],
                     availability: [],
                     rating: 0,
-                    reviews: []
+                    reviews: [],
+                    imageUrl: '', // Додаємо порожнє значення для фото
+                    location: '', // Додаємо порожнє значення для локації
+                    price: 0,    // Додаємо початкову ціну
+                    description: '', // Додаємо порожній опис
+                    createdAt: serverTimestamp()
                 });
             } else {
                 await setDoc(doc(db, "owners", response?.user?.uid), {
-                    ...userData,
+                    name: username,
+                    email,
                     userId: response?.user?.uid,
-                    pets: []
+                    pets: [],
+                    imageUrl: '', // Додаємо порожнє значення для фото
+                    createdAt: serverTimestamp()
                 });
             }
+
+            // Оновлюємо локальний стан користувача
+            setUser({
+                email,
+                username,
+                userId: response?.user?.uid,
+                role,
+                profileUrl: '',
+                name: username
+            });
 
             return { success: true, data: response?.user };
         } catch (e) {
@@ -110,7 +150,7 @@ export const AuthContextProvider = ({children})=>{
     }
 
     return (
-        <AuthContext.Provider value={{user, isAuthenticated, login, register, logout}}>
+        <AuthContext.Provider value={{user, isAuthenticated, login, register, logout, updateUserData}}>
             {children}
         </AuthContext.Provider>
     )

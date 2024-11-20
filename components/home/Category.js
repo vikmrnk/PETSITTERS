@@ -2,40 +2,46 @@ import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet } from 'react
 import React, { useState } from 'react';
 import Colors from '../../constants/Colors';
 
-export default function Category({category}) {
+export default function Category({ onSelectCategory }) {
     const [categories, setCategories] = useState([
         {
             id: 1,
             name: 'Boarding',
+            value: 'boarding',
             imageUrl: require('../../assets/images/Boarding.png')
         },
         {
             id: 2,
             name: 'Sitting',
+            value: 'sitting',
             imageUrl: require('../../assets/images/Sitting.png')
         },
         {
             id: 3,
             name: 'Walking',
+            value: 'walking',
             imageUrl: require('../../assets/images/Walking.png')
         },
         {
             id: 4,
             name: 'Grooming',
+            value: 'grooming',
             imageUrl: require('../../assets/images/Grooming.png')
         },
         {
             id: 5,
             name: 'Training',
+            value: 'training',
             imageUrl: require('../../assets/images/Training.png')
         },
         {
             id: 6,
             name: 'Vet',
+            value: 'vet',
             imageUrl: require('../../assets/images/Vet.png')
         }
     ]);
-    const [selectedCategory, setSelectedCategory] = useState('Boarding');
+    const [selectedCategory, setSelectedCategory] = useState('boarding');
 
     return (
         <View style={{ marginTop: 20 }}>
@@ -56,14 +62,14 @@ export default function Category({category}) {
                 renderItem={({item}) => (
                     <TouchableOpacity 
                         onPress={() => {
-                            setSelectedCategory(item.name);
-                            category(item.name)
+                            setSelectedCategory(item.value);
+                            onSelectCategory(item.value);
                         }}
                         style={{ width: '30%' }}
                     > 
                         <View style={[
                             styles.container,
-                            selectedCategory === item.name && styles.selectedCategoryContainer
+                            selectedCategory === item.value && styles.selectedCategoryContainer
                         ]}>
                             <Image 
                                 source={item.imageUrl}

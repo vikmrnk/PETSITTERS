@@ -1,12 +1,11 @@
-import { View, Text, StyleSheet, Pressable, FlatList } from 'react-native'
-import React from 'react'
+import { View, Text, StyleSheet, FlatList } from 'react-native'
+import React, { useEffect } from 'react'
 import { StatusBar } from 'expo-status-bar';
 import Header from '../../components/home/Header';
 import Slider from '../../components/home/Slider';
 import PetListByCategory from '../../components/home/PetListByCategory';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
 import { useAuth } from '../../context/authContext';
+import { initSliders } from '../../utils/initSliders';
 
 const Colors = {
   PRIMARY: '#9fc0af',
@@ -16,6 +15,10 @@ const Colors = {
 export default function Home() {
   const { user } = useAuth();
   const isSitter = user?.role === 'sitter';
+
+  useEffect(() => {
+    initSliders();
+  }, []);
 
   const SitterHomeContent = () => (
     <View style={{ padding: 20 }}>
@@ -30,21 +33,11 @@ export default function Home() {
   );
 
   const OwnerHomeContent = () => (
-    <>
+    <View style={{ flex: 1 }}>
       <Header />
       <Slider />
       <PetListByCategory />
-      <Link href={'/add-new-pet'} asChild>
-        <Pressable style={styles.addNewPetContainer}>
-          <MaterialIcons name="pets" size={24} color={Colors.PRIMARY} />
-          <Text style={{
-            fontFamily: 'Poppins-Medium',
-            color: Colors.PRIMARY,
-            fontSize: 18
-          }}>Add New Pet</Text>
-        </Pressable>
-      </Link>
-    </>
+    </View>
   );
 
   return (

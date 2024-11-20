@@ -32,3 +32,5 @@ export const usersRef = collection(db, 'users');
 export const sittersRef = collection(db, 'sitters');
 export const ownersRef = collection(db, 'owners');
 export const roomRef = collection(db, 'rooms');
+export const petsRef = collection(db, 'pets');
+export const slidersRef = collection(db, 'sliders');

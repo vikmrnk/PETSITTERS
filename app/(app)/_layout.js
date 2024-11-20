@@ -58,6 +58,16 @@ function AppLayout() {
                     )
                 }}
             />
+            <Tabs.Screen 
+                name="posts" 
+                options={{
+                    headerShown: false,
+                    tabBarLabel: 'Posts',
+                    tabBarIcon: ({color, size}) => (
+                        <Ionicons name="images" size={size} color={color} />
+                    )
+                }}
+            />
         </Tabs>
     )
 }

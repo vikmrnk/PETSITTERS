@@ -1,35 +1,43 @@
-import { View, Text, Image } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
 import React from 'react'
 import { useAuth } from '../../context/authContext'
+import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
+import { StatusBar } from 'expo-status-bar';
 
 export default function Header() {
-    const { user } = useAuth();
-    
-    return (
-        <View style={{
-            display: 'flex',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-        }}>
-            <View>
-                <Text style={{
-                    fontFamily: 'Poppins',
-                    fontSize: 18
-                }}>Welcome,</Text>
-                <Text style={{
-                    fontFamily: 'Poppins-Medium',
-                    fontSize: 25
-                }}>{user?.username || 'Guest'}</Text>
-            </View>
-            <Image 
-                source={user?.profileUrl ? {uri: user.profileUrl} : require('../../assets/images/placeholder.png')} 
-                style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 99
-                }}
-            />
-        </View>
-    )
+  const { user } = useAuth();
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+      <View>
+        <Text style={styles.welcomeText}>Welcome,</Text>
+        <Text style={styles.nameText}>
+          {user?.name || user?.username || 'Guest'}
+        </Text>
+      </View>
+    </View>
+  )
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hp(2),
+    marginTop: hp(4),
+    paddingHorizontal: wp(2),
+    paddingTop: hp(2),
+  },
+  welcomeText: {
+    fontSize: hp(2),
+    fontFamily: 'Poppins-Regular',
+    color: '#666',
+  },
+  nameText: {
+    fontSize: hp(3),
+    fontFamily: 'Poppins-SemiBold',
+    color: '#333',
+  }
+});
